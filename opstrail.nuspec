@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>opstrail</id>
+    <version>0.1.0</version>
+    <packageSourceUrl>https://github.com/ricky-ultimate/opstrail</packageSourceUrl>
+    <owners>ricky-ultimate</owners>
+    <title>OpsTrail</title>
+    <authors>リッキー</authors>
+    <projectUrl>https://github.com/ricky-ultimate/opstrail</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/ricky-ultimate/opstrail/master/assets/icon.png</iconUrl>
+    <copyright>2025 リッキー</copyright>
+    <licenseUrl>https://github.com/ricky-ultimate/opstrail/blob/master/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/ricky-ultimate/opstrail</projectSourceUrl>
+    <docsUrl>https://github.com/ricky-ultimate/opstrail#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/ricky-ultimate/opstrail/issues</bugTrackerUrl>
+    <tags>cli productivity terminal activity-tracker developer-tools time-tracking rust</tags>
+    <summary>Terminal activity time-machine and developer productivity tracker</summary>
+    <description>
+OpsTrail is a local-first, privacy-focused terminal activity tracker that records everything you do in your shell.
+
+Features:
+- Automatic activity tracking (commands, directories, sessions)
+- Time travel navigation - jump back to where you were working
+- Search through your terminal history
+- Analytics and statistics about your work patterns
+- Session management with idle detection
+- Project awareness via projwarp integration
+- Context notes for leaving breadcrumbs
+- PowerShell integration included
+
+Track your terminal activity, search your history, and boost your productivity with OpsTrail.
+    </description>
+    <releaseNotes>https://github.com/ricky-ultimate/opstrail/releases</releaseNotes>
+    <dependencies>
+      <dependency id="projwarp" version="0.1.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
