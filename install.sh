@@ -30,9 +30,21 @@ OPSTRAIL_INTEGRATION='
 # OpsTrail - Terminal Activity Tracker Integration
 export OPSTRAIL_SESSION_STARTED=0
 
+# Store trail executable path for reliable exit handling
+export OPSTRAIL_TRAIL_PATH=""
+
+# Find and store trail path
+if command -v trail >/dev/null 2>&1; then
+    OPSTRAIL_TRAIL_PATH=$(command -v trail)
+fi
+
 # Start session on shell startup
 if [ "$OPSTRAIL_SESSION_STARTED" -eq 0 ]; then
-    trail log --session-start 2>/dev/null || true
+    if [ -n "$OPSTRAIL_TRAIL_PATH" ]; then
+        "$OPSTRAIL_TRAIL_PATH" log --session-start 2>/dev/null || true
+    else
+        trail log --session-start 2>/dev/null || true
+    fi
     export OPSTRAIL_SESSION_STARTED=1
 fi
 
@@ -45,8 +57,12 @@ opstrail_preexec() {
         trail*|opstrail*|opstrail_*) return ;;
     esac
 
-    # Log the command
-    trail log --cmd "$cmd" --cwd "$PWD" 2>/dev/null || true
+    # Log the command using stored path if available
+    if [ -n "$OPSTRAIL_TRAIL_PATH" ] && [ -x "$OPSTRAIL_TRAIL_PATH" ]; then
+        "$OPSTRAIL_TRAIL_PATH" log --cmd "$cmd" --cwd "$PWD" 2>/dev/null || true
+    else
+        trail log --cmd "$cmd" --cwd "$PWD" 2>/dev/null || true
+    fi
 }
 
 # Bash: Use DEBUG trap
@@ -71,9 +87,16 @@ if [ -n "$ZSH_VERSION" ]; then
     add-zsh-hook preexec opstrail_preexec
 fi
 
-# Session end on exit
+# Session end on exit - use stored path for reliability
 opstrail_exit() {
-    trail log --session-end 2>/dev/null || true
+    if [ -n "$OPSTRAIL_TRAIL_PATH" ] && [ -x "$OPSTRAIL_TRAIL_PATH" ]; then
+        "$OPSTRAIL_TRAIL_PATH" log --session-end 2>/dev/null || true
+    else
+        # Fallback to PATH lookup
+        if command -v trail >/dev/null 2>&1; then
+            trail log --session-end 2>/dev/null || true
+        fi
+    fi
 }
 
 trap opstrail_exit EXIT
@@ -169,7 +192,7 @@ trail() {
     esac
 }
 
-echo "OpsTrail tracking enabled"
+echo "✓ OpsTrail tracking enabled"
 '
 
 # Check if already installed
@@ -184,7 +207,7 @@ if grep -q "OpsTrail - Terminal Activity Tracker" "$SHELL_RC" 2>/dev/null; then
 
     # Remove old integration
     echo "Removing old integration..."
-    sed -i.bak '/# OpsTrail - Terminal Activity Tracker/,/echo "✅ OpsTrail tracking enabled"/d' "$SHELL_RC"
+    sed -i.bak '/# OpsTrail - Terminal Activity Tracker/,/echo.*OpsTrail tracking enabled/d' "$SHELL_RC"
 fi
 
 # Add integration
@@ -193,7 +216,7 @@ echo "" >> "$SHELL_RC"
 echo "$OPSTRAIL_INTEGRATION" >> "$SHELL_RC"
 
 echo ""
-echo "OpsTrail $SHELL_NAME integration installed!"
+echo "✓ OpsTrail $SHELL_NAME integration installed!"
 echo ""
 echo "Reload your shell profile to activate:"
 echo "   source $SHELL_RC"
