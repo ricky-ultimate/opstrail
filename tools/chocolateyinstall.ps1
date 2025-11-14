@@ -68,8 +68,22 @@ function global:prompt {
 }
 
 # Register session end on exit
+# Use full path to ensure trail.exe is found during exit
+$script:TrailExePath = (Get-Command trail.exe -ErrorAction SilentlyContinue).Source
+if (-not $script:TrailExePath) {
+    $script:TrailExePath = "trail.exe"
+}
+
 Register-EngineEvent PowerShell.Exiting -Action {
-    & trail log --session-end 2>$null
+    try {
+        if ($script:TrailExePath) {
+            & $script:TrailExePath log --session-end
+        } else {
+            & trail.exe log --session-end
+        }
+    } catch {
+        # Silently fail if trail is not accessible
+    }
 } | Out-Null
 
 # Helper function: Jump back in time

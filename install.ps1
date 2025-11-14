@@ -40,12 +40,27 @@ function global:prompt {
 }
 
 # Register session end on exit
-Register-EngineEvent PowerShell.Exiting -Action {
-    & trail log --session-end 2>$null
+# Store trail path to ensure it's accessible during exit
+$global:OpsTrail_TrailPath = (Get-Command trail -ErrorAction SilentlyContinue).Source
+if (-not $global:OpsTrail_TrailPath) {
+    $global:OpsTrail_TrailPath = (Get-Command trail.exe -ErrorAction SilentlyContinue).Source
 }
 
+Register-EngineEvent PowerShell.Exiting -Action {
+    try {
+        if ($global:OpsTrail_TrailPath -and (Test-Path $global:OpsTrail_TrailPath)) {
+            & $global:OpsTrail_TrailPath log --session-end
+        } else {
+            # Fallback to just calling trail
+            & trail log --session-end 2>$null
+        }
+    } catch {
+        # Silently fail - we're exiting anyway
+    }
+} -SupportEvent | Out-Null
+
 # Helper function: Jump back in time
-function trail-back {
+function global:trail-back {
     param([string]$when = "30m")
     $path = & trail back $when 2>$null
     if ($LASTEXITCODE -eq 0 -and $path -and (Test-Path $path)) {
@@ -57,7 +72,7 @@ function trail-back {
 }
 
 # Helper function: Resume last session
-function trail-resume {
+function global:trail-resume {
     $output = & trail resume 2>&1
 
     # Extract path from resume output
@@ -81,7 +96,7 @@ function trail-resume {
 }
 
 # Override trail command to auto-cd for back/resume
-function trail {
+function global:trail {
     param(
         [Parameter(Position=0)]
         [string]$subcommand,
@@ -131,7 +146,7 @@ function trail {
     & trail.exe $subcommand @args
 }
 
-Write-Host "OpsTrail tracking enabled" -ForegroundColor Cyan
+Write-Host "✓ OpsTrail tracking enabled" -ForegroundColor Cyan
 '@
 
 # Check if profile exists
@@ -151,14 +166,14 @@ if ($profileContent -like "*OpsTrail*") {
     }
 
     # Remove old integration
-    $profileContent = $profileContent -replace '(?s)# OpsTrail.*?Write-Host "OpsTrail tracking enabled".*?\n', ''
+    $profileContent = $profileContent -replace '(?s)# OpsTrail.*?Write-Host.*OpsTrail tracking enabled.*?\n', ''
     Set-Content $PROFILE $profileContent.Trim()
 }
 
 # Add integration
 Add-Content $PROFILE "`n$OpsTrailIntegration"
 
-Write-Host "`nOpsTrail PowerShell integration installed!" -ForegroundColor Green
+Write-Host "`n✓ OpsTrail PowerShell integration installed!" -ForegroundColor Green
 Write-Host "`nReload your profile to activate:" -ForegroundColor Cyan
 Write-Host "  . `$PROFILE" -ForegroundColor Yellow
 Write-Host "`nUseful commands:" -ForegroundColor Cyan
