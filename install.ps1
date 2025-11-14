@@ -106,7 +106,7 @@ if ($profileContent -like "*OpsTrail*") {
 # Add integration
 Add-Content $PROFILE "`n$OpsTrailIntegration"
 
-Write-Host "`n✨ OpsTrail PowerShell integration installed!" -ForegroundColor Green
+Write-Host "`nOpsTrail PowerShell integration installed!" -ForegroundColor Green
 Write-Host "`nReload your profile to activate:" -ForegroundColor Cyan
 Write-Host "  . `$PROFILE" -ForegroundColor Yellow
 Write-Host "`nUseful commands:" -ForegroundColor Cyan

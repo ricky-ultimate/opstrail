@@ -136,7 +136,7 @@ pub fn stats(args: StatsArgs) -> Result<()> {
         }
     }
 
-    println!("{}", "📊 Activity Statistics".bold().cyan());
+    println!("{}", "Activity Statistics".bold().cyan());
     println!();
 
     println!("{}", "Most Active Projects:".bold());
@@ -180,7 +180,7 @@ pub fn timeline(args: TimelineArgs) -> Result<()> {
         events.iter().collect()
     };
 
-    println!("{}", "📅 Activity Timeline".bold().cyan());
+    println!("{}", "Activity Timeline".bold().cyan());
     println!();
 
     for event in filtered.iter().rev().take(args.limit) {
@@ -191,13 +191,13 @@ pub fn timeline(args: TimelineArgs) -> Result<()> {
 
         let icon_and_text = match &event.event_type {
             EventType::Command { cmd } => format!("⚡ {}", cmd.yellow()),
-            EventType::DirectoryChange { to, .. } => format!("📁 cd {}", to.blue()),
+            EventType::DirectoryChange { to, .. } => format!("cd {}", to.blue()),
             EventType::SessionStart => format!("🟢 {}", "Session started".green()),
             EventType::SessionEnd => format!("🔴 {}", "Session ended".red()),
-            EventType::IdleStart => format!("💤 {}", "Idle".dimmed()),
-            EventType::IdleEnd => format!("👀 {}", "Back".green()),
-            EventType::Note { text } => format!("📝 {}", text.green()),
-            EventType::ProjectDetected { name } => format!("📦 Entered {}", name.cyan()),
+            EventType::IdleStart => format!("{}", "Idle".dimmed()),
+            EventType::IdleEnd => format!("{}", "Back".green()),
+            EventType::Note { text } => format!("{}", text.green()),
+            EventType::ProjectDetected { name } => format!("Entered {}", name.cyan()),
         };
 
         println!("{} {} {}", time.to_string().dimmed(), project, icon_and_text);
@@ -273,10 +273,9 @@ pub fn today() -> Result<()> {
         return Ok(());
     }
 
-    println!("{}", "📊 Today's Summary".bold().cyan());
+    println!("{}", "Today's Summary".bold().cyan());
     println!();
 
-    // Count by type
     let mut projects = HashMap::new();
     let mut commands = 0;
 
@@ -330,7 +329,7 @@ pub fn projects() -> Result<()> {
         }
     }
 
-    println!("{}", "📦 Project Activity".bold().cyan());
+    println!("{}", "Project Activity".bold().cyan());
     println!();
 
     if project_stats.is_empty() {
