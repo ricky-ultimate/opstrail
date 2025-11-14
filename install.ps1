@@ -47,30 +47,88 @@ Register-EngineEvent PowerShell.Exiting -Action {
 # Helper function: Jump back in time
 function trail-back {
     param([string]$when = "30m")
-    $path = & trail back $when
-    if ($path -and (Test-Path $path)) {
+    $path = & trail back $when 2>$null
+    if ($LASTEXITCODE -eq 0 -and $path -and (Test-Path $path)) {
         Set-Location $path
         Write-Host "Jumped back to: $path" -ForegroundColor Green
+    } else {
+        Write-Host "No activity found for that time" -ForegroundColor Red
     }
 }
 
 # Helper function: Resume last session
 function trail-resume {
-    $output = & trail resume
-    Write-Host $output
+    $output = & trail resume 2>&1
 
     # Extract path from resume output
-    $pathLine = $output | Select-String -Pattern "Path: (.+)"
+    $pathLine = $output | Select-String -Pattern "Path:\s*(.+)"
+
     if ($pathLine) {
+        Write-Host $output
         $path = $pathLine.Matches.Groups[1].Value.Trim()
+
         if (Test-Path $path) {
-            $response = Read-Host "`nJump to this location? (y/n)"
+            Write-Host ""
+            $response = Read-Host "Jump to this location? (y/n)"
             if ($response -eq 'y' -or $response -eq 'Y') {
                 Set-Location $path
                 Write-Host "Resumed at: $path" -ForegroundColor Green
             }
         }
+    } else {
+        Write-Host $output
     }
+}
+
+# Override trail command to auto-cd for back/resume
+function trail {
+    param(
+        [Parameter(Position=0)]
+        [string]$subcommand,
+
+        [Parameter(Position=1, ValueFromRemainingArguments=$true)]
+        [string[]]$args
+    )
+
+    # For 'back' command, automatically cd
+    if ($subcommand -eq "back" -and $args.Count -gt 0) {
+        $when = $args[0]
+        $path = & trail.exe back $when 2>$null
+
+        if ($LASTEXITCODE -eq 0 -and $path -and (Test-Path $path)) {
+            Set-Location $path
+            Write-Host "Jumped back $when to: $path" -ForegroundColor Green
+        } else {
+            Write-Host "No activity found for '$when'" -ForegroundColor Red
+        }
+        return
+    }
+
+    # For 'resume' command, show info and prompt to jump
+    if ($subcommand -eq "resume") {
+        $output = & trail.exe resume 2>&1
+        $pathLine = $output | Select-String -Pattern "Path:\s*(.+)"
+
+        if ($pathLine) {
+            Write-Host $output
+            $path = $pathLine.Matches.Groups[1].Value.Trim()
+
+            if (Test-Path $path) {
+                Write-Host ""
+                $response = Read-Host "Jump to this location? (y/n)"
+                if ($response -eq 'y' -or $response -eq 'Y') {
+                    Set-Location $path
+                    Write-Host "Resumed at: $path" -ForegroundColor Green
+                }
+            }
+        } else {
+            Write-Host $output
+        }
+        return
+    }
+
+    # For all other commands, pass through to the real trail executable
+    & trail.exe $subcommand @args
 }
 
 Write-Host "OpsTrail tracking enabled" -ForegroundColor Cyan
