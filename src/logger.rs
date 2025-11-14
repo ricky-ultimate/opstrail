@@ -4,7 +4,7 @@ use crate::events::{Event, EventType};
 use crate::projwarp::ProjWarp;
 use crate::session::SessionManager;
 use anyhow::Result;
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::Write;
 
 pub fn log_event(args: LogArgs) -> Result<()> {
