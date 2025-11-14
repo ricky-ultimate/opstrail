@@ -68,23 +68,27 @@ function global:prompt {
 }
 
 # Register session end on exit
-# Use full path to ensure trail.exe is found during exit
-$script:TrailExePath = (Get-Command trail.exe -ErrorAction SilentlyContinue).Source
-if (-not $script:TrailExePath) {
-    $script:TrailExePath = "trail.exe"
+# Store trail path and embed it in the script block
+$global:OpsTrail_TrailPath = (Get-Command trail -ErrorAction SilentlyContinue).Source
+if (-not $global:OpsTrail_TrailPath) {
+    $global:OpsTrail_TrailPath = (Get-Command trail.exe -ErrorAction SilentlyContinue).Source
 }
 
-Register-EngineEvent PowerShell.Exiting -Action {
+# Create the action with embedded path to avoid scope issues
+$exitAction = [scriptblock]::Create(@"
     try {
-        if ($script:TrailExePath) {
-            & $script:TrailExePath log --session-end
+        `$trailPath = '$($global:OpsTrail_TrailPath)'
+        if (`$trailPath -and (Test-Path `$trailPath)) {
+            & `$trailPath log --session-end
         } else {
-            & trail.exe log --session-end
+            & trail log --session-end 2>`$null
         }
     } catch {
-        # Silently fail if trail is not accessible
+        # Silently fail during exit
     }
-} | Out-Null
+"@)
+
+Register-EngineEvent PowerShell.Exiting -Action $exitAction | Out-Null
 
 # Helper function: Jump back in time
 function global:trail-back {

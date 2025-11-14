@@ -46,18 +46,21 @@ if (-not $global:OpsTrail_TrailPath) {
     $global:OpsTrail_TrailPath = (Get-Command trail.exe -ErrorAction SilentlyContinue).Source
 }
 
-Register-EngineEvent PowerShell.Exiting -Action {
+# Create the action as a script block that captures the path
+$exitAction = [scriptblock]::Create(@"
     try {
-        if ($global:OpsTrail_TrailPath -and (Test-Path $global:OpsTrail_TrailPath)) {
-            & $global:OpsTrail_TrailPath log --session-end
+        `$trailPath = '$($global:OpsTrail_TrailPath)'
+        if (`$trailPath -and (Test-Path `$trailPath)) {
+            & `$trailPath log --session-end
         } else {
-            # Fallback to just calling trail
-            & trail log --session-end 2>$null
+            & trail log --session-end 2>`$null
         }
     } catch {
         # Silently fail - we're exiting anyway
     }
-} -SupportEvent | Out-Null
+"@)
+
+Register-EngineEvent PowerShell.Exiting -Action $exitAction | Out-Null
 
 # Helper function: Jump back in time
 function global:trail-back {
