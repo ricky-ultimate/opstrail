@@ -4,7 +4,7 @@ use crate::events::{Event, EventType};
 use crate::projwarp::ProjWarp;
 use crate::utils;
 use anyhow::Result;
-use chrono::Local;
+use chrono::{Local, Duration};
 use colored::*;
 use std::collections::HashMap;
 use std::fs;
@@ -17,18 +17,26 @@ pub fn time_travel(args: BackArgs) -> Result<()> {
         return Ok(());
     }
 
-    let target_time = utils::parse_relative_time(&args.when)?;
-
     let contents = fs::read_to_string(&timeline_path)?;
     let events: Vec<Event> = contents
         .lines()
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect();
 
+    let target_time = utils::parse_relative_time(&args.when)?;
+
     let target_event = events
         .iter()
-        .filter(|e| e.timestamp <= target_time && e.cwd.is_some())
-        .max_by_key(|e| e.timestamp);
+        .filter(|e| e.cwd.is_some())
+        .min_by_key(|e| {
+            // Calculate absolute time difference
+            let diff = if e.timestamp > target_time {
+                e.timestamp - target_time
+            } else {
+                target_time - e.timestamp
+            };
+            diff.num_seconds().abs()
+        });
 
     if let Some(event) = target_event {
         if let Some(ref cwd) = event.cwd {
