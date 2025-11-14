@@ -113,7 +113,7 @@ trail-resume() {
 
         if [[ $response =~ ^[Yy]$ ]]; then
             cd "$path" || return 1
-            echo "✅ Resumed at: $path"
+            echo "Resumed at: $path"
         fi
     fi
 }
@@ -169,7 +169,7 @@ trail() {
     esac
 }
 
-echo "✅ OpsTrail tracking enabled"
+echo "OpsTrail tracking enabled"
 '
 
 # Check if already installed
