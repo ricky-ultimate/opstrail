@@ -146,7 +146,7 @@ function global:trail {
     & trail.exe $subcommand @args
 }
 
-Write-Host "✓ OpsTrail tracking enabled" -ForegroundColor Cyan
+Write-Host "OpsTrail tracking enabled" -ForegroundColor Cyan
 '@
 
 # Check if profile exists
@@ -173,15 +173,19 @@ if ($profileContent -like "*OpsTrail*") {
 # Add integration
 Add-Content $PROFILE "`n$OpsTrailIntegration"
 
-Write-Host "`n✓ OpsTrail PowerShell integration installed!" -ForegroundColor Green
-Write-Host "`nReload your profile to activate:" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "OpsTrail PowerShell integration installed!" -ForegroundColor Green
+Write-Host ""
+Write-Host "Reload your profile to activate:" -ForegroundColor Cyan
 Write-Host "  . `$PROFILE" -ForegroundColor Yellow
-Write-Host "`nUseful commands:" -ForegroundColor Cyan
-Write-Host "  trail today          - Today's summary" -ForegroundColor White
+Write-Host ""
+Write-Host "Useful commands:" -ForegroundColor Cyan
+Write-Host "  trail today          - Today summary" -ForegroundColor White
 Write-Host "  trail timeline       - View activity timeline" -ForegroundColor White
 Write-Host "  trail stats          - Activity statistics" -ForegroundColor White
 Write-Host "  trail search <term>  - Search your history" -ForegroundColor White
-Write-Host "  trail back 1h        - Where was I an hour ago?" -ForegroundColor White
+Write-Host "  trail back 1h        - Where was I an hour ago" -ForegroundColor White
 Write-Host "  trail-back 30m       - Jump back 30 minutes" -ForegroundColor White
 Write-Host "  trail-resume         - Resume last session" -ForegroundColor White
 Write-Host "  trail note <text>    - Add a note" -ForegroundColor White
+Write-Host ""
