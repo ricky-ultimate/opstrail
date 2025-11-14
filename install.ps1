@@ -3,7 +3,6 @@
 $OpsTrailIntegration = @'
 
 # OpsTrail - Terminal Activity Tracker Integration
-$global:OpsTrailLastCommand = $null
 $global:OpsTrailSessionStarted = $false
 
 # Start session on profile load
@@ -12,28 +11,23 @@ if (-not $global:OpsTrailSessionStarted) {
     $global:OpsTrailSessionStarted = $true
 }
 
-# Log commands before execution
-$ExecutionContext.InvokeCommand.PreCommandLookupAction = {
-    param($commandName, $commandLookupEventArgs)
-
-    # Skip trail commands to avoid recursion
-    if ($commandName -eq "trail" -or $commandName -eq "opstrail") {
-        return
-    }
-
-    $global:OpsTrailLastCommand = $commandName
-}
-
-# Log after each prompt (captures the full command with args)
+# Capture command history after execution
 function global:OpsTrail-LogCommand {
-    if ($global:OpsTrailLastCommand) {
-        $cmd = $global:OpsTrailLastCommand
+    # Get the last command from history
+    $lastCmd = Get-History -Count 1 -ErrorAction SilentlyContinue
+
+    if ($lastCmd) {
+        $cmd = $lastCmd.CommandLine
+
+        # Skip trail commands to avoid recursion
+        if ($cmd -like "trail *" -or $cmd -like "opstrail *" -or $cmd -like "*OpsTrail*") {
+            return
+        }
+
         $cwd = $PWD.Path
 
         # Log the command
         & trail log --cmd "$cmd" --cwd "$cwd" 2>$null
-
-        $global:OpsTrailLastCommand = $null
     }
 }
 
