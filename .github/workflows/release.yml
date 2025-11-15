@@ -47,7 +47,7 @@ jobs:
           Copy-Item "target/${{ matrix.target }}/release/trail.exe" -Destination "$NAME/"
           Copy-Item "README.md" -Destination "$NAME/"
           Copy-Item "LICENSE" -Destination "$NAME/"
-          Copy-Item "install-opstrail.ps1" -Destination "$NAME/"
+          Copy-Item "install.ps1" -Destination "$NAME/"
           Compress-Archive -Path $NAME -DestinationPath "$NAME.zip"
           echo "ASSET=$NAME.zip" >> $env:GITHUB_ENV
 
