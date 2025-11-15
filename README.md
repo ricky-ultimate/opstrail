@@ -2,6 +2,10 @@
 
 **Your Terminal Activity Time-Machine**
 
+[![Crates.io](https://img.shields.io/crates/v/opstrail.svg)](https://crates.io/crates/opstrail)
+[![Chocolatey](https://img.shields.io/chocolatey/v/opstrail.svg)](https://community.chocolatey.org/packages/opstrail)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 OpsTrail is a local-first, privacy-focused terminal activity tracker that records everything you do in your shell and lets you search, analyze, and time-travel through your work history.
 
 ## Features
