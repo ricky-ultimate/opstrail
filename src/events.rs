@@ -51,6 +51,7 @@ impl Event {
 }
 
 impl EventType {
+    #[allow(dead_code)]
     pub fn display_name(&self) -> &str {
         match self {
             EventType::Command { .. } => "command",

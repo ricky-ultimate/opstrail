@@ -47,6 +47,7 @@ impl SessionManager {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn check_idle() -> Result<bool> {
         let config = Config::load()?;
         let state_path = Config::state_path()?;

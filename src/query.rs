@@ -4,7 +4,7 @@ use crate::events::{Event, EventType};
 use crate::projwarp::ProjWarp;
 use crate::utils;
 use anyhow::Result;
-use chrono::{Local, Duration};
+use chrono::Local;
 use colored::*;
 use std::collections::HashMap;
 use std::fs;
@@ -23,8 +23,11 @@ pub fn time_travel(args: BackArgs) -> Result<()> {
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect();
 
+    // Calculate the target time (how far back to look)
     let target_time = utils::parse_relative_time(&args.when)?;
 
+    // Find the closest event to the target time that has a directory
+    // This handles gaps in activity gracefully
     let target_event = events
         .iter()
         .filter(|e| e.cwd.is_some())
@@ -116,7 +119,7 @@ pub fn search(args: SearchArgs) -> Result<()> {
     Ok(())
 }
 
-pub fn stats(args: StatsArgs) -> Result<()> {
+pub fn stats(_args: StatsArgs) -> Result<()> {
     let timeline_path = Config::timeline_path()?;
 
     if !timeline_path.exists() {
@@ -199,13 +202,13 @@ pub fn timeline(args: TimelineArgs) -> Result<()> {
 
         let icon_and_text = match &event.event_type {
             EventType::Command { cmd } => format!("⚡ {}", cmd.yellow()),
-            EventType::DirectoryChange { to, .. } => format!("cd {}", to.blue()),
+            EventType::DirectoryChange { to, .. } => format!("📁 cd {}", to.blue()),
             EventType::SessionStart => format!("🟢 {}", "Session started".green()),
             EventType::SessionEnd => format!("🔴 {}", "Session ended".red()),
-            EventType::IdleStart => format!("{}", "Idle".dimmed()),
-            EventType::IdleEnd => format!("{}", "Back".green()),
-            EventType::Note { text } => format!("{}", text.green()),
-            EventType::ProjectDetected { name } => format!("Entered {}", name.cyan()),
+            EventType::IdleStart => format!("💤 {}", "Idle".dimmed()),
+            EventType::IdleEnd => format!("⚡ {}", "Active".green()),
+            EventType::Note { text } => format!("📝 {}", text.green()),
+            EventType::ProjectDetected { name } => format!("📂 Entered {}", name.cyan()),
         };
 
         println!("{} {} {}", time.to_string().dimmed(), project, icon_and_text);

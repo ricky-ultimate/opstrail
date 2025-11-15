@@ -44,6 +44,7 @@ impl ProjWarp {
         None
     }
 
+    #[allow(dead_code)]
     pub fn get_project_path(alias: &str) -> Option<String> {
         let config = Self::load()?;
         config.projects.get(alias).cloned()
