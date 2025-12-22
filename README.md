@@ -23,13 +23,16 @@ OpsTrail is a local-first, privacy-focused terminal activity tracker that record
 
 ### Quick Install
 
-Choose your preferred package manager:
+Choose your preferred installation method:
 
 ```powershell
-# Chocolatey (Windows) - Includes PowerShell integration
+# Windows (PowerShell Script) - Downloads and installs the latest release, including PowerShell integration
+irm https://raw.githubusercontent.com/ricky-ultimate/opstrail/master/quick-install.ps1 | iex
+
+# Chocolatey (Windows) - Downloads and installs via Chocolatey, includes PowerShell integration
 choco install opstrail
 
-# Cargo (Cross-platform)
+# Cargo (Cross-platform) - Installs the Rust binary from crates.io
 cargo install opstrail
 ```
 
@@ -48,9 +51,10 @@ copy target\release\trail.exe C:\Users\YourName\.local\bin\  # Windows
 
 ### Shell Integration
 
-#### **PowerShell (Windows)**
+If you installed via Cargo or built from source, you'll need to set up shell integration manually.
+(Note: The PowerShell Quick Install script and Chocolatey package already handle this for Windows.)
 
-If you didn't install via Chocolatey, set up PowerShell integration:
+#### **PowerShell (Windows)**
 
 ```powershell
 # Run the installer script
@@ -61,8 +65,6 @@ If you didn't install via Chocolatey, set up PowerShell integration:
 ```
 
 #### **Bash/Zsh (Unix)**
-
-Set up shell integration:
 
 ```bash
 # Run the installer script
@@ -533,3 +535,4 @@ It's like having a DVR for your terminal. Rewind, replay, and review your develo
 **Made with ❤️ by リッキー**
 
 *Track your journey, boost your productivity* 🚀
+```
