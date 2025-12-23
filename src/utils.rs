@@ -43,3 +43,31 @@ pub fn parse_relative_time(input: &str) -> Result<DateTime<Utc>> {
         _ => Err(anyhow!("Unrecognized time format: {}", input))
     }
 }
+
+/// Format a duration in human-readable form
+pub fn format_duration(duration: Duration) -> String {
+    let total_secs = duration.num_seconds().abs();
+
+    if total_secs < 60 {
+        format!("{}s", total_secs)
+    } else if total_secs < 3600 {
+        let mins = total_secs / 60;
+        format!("{}m", mins)
+    } else if total_secs < 86400 {
+        let hours = total_secs / 3600;
+        let mins = (total_secs % 3600) / 60;
+        if mins > 0 {
+            format!("{}h {}m", hours, mins)
+        } else {
+            format!("{}h", hours)
+        }
+    } else {
+        let days = total_secs / 86400;
+        let hours = (total_secs % 86400) / 3600;
+        if hours > 0 {
+            format!("{}d {}h", days, hours)
+        } else {
+            format!("{}d", days)
+        }
+    }
+}
