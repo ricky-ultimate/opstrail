@@ -126,7 +126,11 @@ pub struct TimelineArgs {
     #[arg(long)]
     pub today: bool,
 
-    /// Show timeline for specific date
+    /// Show timeline for yesterday
+    #[arg(long)]
+    pub yesterday: bool,
+
+    /// Show timeline for specific date (YYYY-MM-DD)
     #[arg(long)]
     pub date: Option<String>,
 
