@@ -30,7 +30,7 @@ if (-not (Test-Path $trailPath)) {
     throw "trail.exe not found after installation"
 }
 
-# PowerShell Integration
+# PowerShell Integration - Matches install.ps1 exactly
 $integrationScript = @'
 
 # OpsTrail - Terminal Activity Tracker Integration
@@ -44,6 +44,7 @@ if (-not $global:OpsTrailSessionStarted) {
 
 # Capture command history after execution
 function global:OpsTrail-LogCommand {
+    # Get the last command from history
     $lastCmd = Get-History -Count 1 -ErrorAction SilentlyContinue
 
     if ($lastCmd) {
@@ -55,6 +56,8 @@ function global:OpsTrail-LogCommand {
         }
 
         $cwd = $PWD.Path
+
+        # Log the command
         & trail log --cmd "$cmd" --cwd "$cwd" 2>$null
     }
 }
@@ -68,13 +71,13 @@ function global:prompt {
 }
 
 # Register session end on exit
-# Store trail path and embed it in the script block
+# Store trail path to ensure it's accessible during exit
 $global:OpsTrail_TrailPath = (Get-Command trail -ErrorAction SilentlyContinue).Source
 if (-not $global:OpsTrail_TrailPath) {
     $global:OpsTrail_TrailPath = (Get-Command trail.exe -ErrorAction SilentlyContinue).Source
 }
 
-# Create the action with embedded path to avoid scope issues
+# Create the action as a script block that captures the path
 $exitAction = [scriptblock]::Create(@"
     try {
         `$trailPath = '$($global:OpsTrail_TrailPath)'
@@ -84,7 +87,7 @@ $exitAction = [scriptblock]::Create(@"
             & trail log --session-end 2>`$null
         }
     } catch {
-        # Silently fail during exit
+        # Silently fail - we're exiting anyway
     }
 "@)
 
@@ -105,6 +108,8 @@ function global:trail-back {
 # Helper function: Resume last session
 function global:trail-resume {
     $output = & trail resume 2>&1
+
+    # Extract path from resume output
     $pathLine = $output | Select-String -Pattern "Path:\s*(.+)"
 
     if ($pathLine) {
@@ -175,7 +180,7 @@ function global:trail {
     & trail.exe $subcommand @args
 }
 
-Write-Host "✓ OpsTrail tracking enabled" -ForegroundColor Cyan
+Write-Host "OpsTrail tracking enabled" -ForegroundColor Cyan
 '@
 
 # Add integration to PowerShell profile
@@ -195,33 +200,29 @@ if (Test-Path $profilePath) {
     $content = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue
     if ($content -notmatch 'OpsTrail.*Terminal Activity Tracker') {
         Add-Content $profilePath "`n$integrationScript"
-        Write-Host "✓ Added OpsTrail integration to PowerShell profile" -ForegroundColor Green
+        Write-Host "Added OpsTrail integration to PowerShell profile" -ForegroundColor Green
     } else {
-        Write-Host "✓ OpsTrail integration already exists in profile" -ForegroundColor Yellow
+        Write-Host "OpsTrail integration already exists in profile" -ForegroundColor Yellow
     }
 } else {
     New-Item -ItemType File -Path $profilePath -Force | Out-Null
     Set-Content $profilePath $integrationScript
-    Write-Host "✓ Created PowerShell profile with OpsTrail integration" -ForegroundColor Green
+    Write-Host "Created PowerShell profile with OpsTrail integration" -ForegroundColor Green
 }
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  OpsTrail installed successfully!" -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "OpsTrail PowerShell integration installed!" -ForegroundColor Green
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Yellow
-Write-Host "  1. Restart your PowerShell session OR run: . `$PROFILE" -ForegroundColor White
-Write-Host "  2. Start using trail commands!" -ForegroundColor White
+Write-Host "Reload your profile to activate:" -ForegroundColor Cyan
+Write-Host "  . `$PROFILE" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Quick start commands:" -ForegroundColor Cyan
-Write-Host "  trail today          - Today's activity summary" -ForegroundColor White
+Write-Host "Useful commands:" -ForegroundColor Cyan
+Write-Host "  trail today          - Today summary" -ForegroundColor White
 Write-Host "  trail timeline       - View activity timeline" -ForegroundColor White
-Write-Host "  trail stats          - View statistics" -ForegroundColor White
-Write-Host "  trail back 1h        - Jump back 1 hour" -ForegroundColor White
+Write-Host "  trail stats          - Activity statistics" -ForegroundColor White
+Write-Host "  trail search <term>  - Search your history" -ForegroundColor White
+Write-Host "  trail back 1h        - Where was I an hour ago" -ForegroundColor White
 Write-Host "  trail-back 30m       - Jump back 30 minutes" -ForegroundColor White
 Write-Host "  trail-resume         - Resume last session" -ForegroundColor White
 Write-Host "  trail note <text>    - Add a note" -ForegroundColor White
-Write-Host ""
-Write-Host "Documentation: https://github.com/ricky-ultimate/opstrail" -ForegroundColor DarkGray
 Write-Host ""
