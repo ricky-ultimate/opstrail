@@ -4,7 +4,7 @@ use crate::events::{Event, EventType};
 use crate::projwarp::ProjWarp;
 use crate::utils;
 use anyhow::Result;
-use chrono::Local;
+use chrono::{Local, NaiveDate};
 use colored::*;
 use std::collections::HashMap;
 use std::fs;
@@ -23,30 +23,30 @@ pub fn time_travel(args: BackArgs) -> Result<()> {
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect();
 
-    // Calculate the target time (how far back to look)
     let target_time = utils::parse_relative_time(&args.when)?;
 
-    // Find the closest event to the target time that has a directory
-    // This handles gaps in activity gracefully
+    // Find closest event to target time that has a directory
+    // We want the event that happened AT OR BEFORE the target time
     let target_event = events
         .iter()
-        .filter(|e| e.cwd.is_some())
-        .min_by_key(|e| {
-            // Calculate absolute time difference
-            let diff = if e.timestamp > target_time {
-                e.timestamp - target_time
-            } else {
-                target_time - e.timestamp
-            };
-            diff.num_seconds().abs()
-        });
+        .filter(|e| e.cwd.is_some() && e.timestamp <= target_time)
+        .max_by_key(|e| e.timestamp);
 
     if let Some(event) = target_event {
         if let Some(ref cwd) = event.cwd {
-            println!("{}", cwd);
+            // Check if we found something reasonably close (within a day)
+            let time_diff = target_time - event.timestamp;
+            if time_diff.num_hours() < 24 {
+                println!("{}", cwd);
+            } else {
+                eprintln!("No recent activity found for that time (closest match was {} ago)",
+                    utils::format_duration(time_diff));
+                std::process::exit(1);
+            }
         }
     } else {
         eprintln!("No activity found for that time.");
+        std::process::exit(1);
     }
 
     Ok(())
@@ -75,6 +75,14 @@ pub fn search(args: SearchArgs) -> Result<()> {
                 let today = Local::now().date_naive();
                 if e.timestamp.with_timezone(&Local).date_naive() != today {
                     return false;
+                }
+            }
+
+            if let Some(ref date_str) = args.date {
+                if let Ok(target_date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                    if e.timestamp.with_timezone(&Local).date_naive() != target_date {
+                        return false;
+                    }
                 }
             }
 
@@ -182,20 +190,41 @@ pub fn timeline(args: TimelineArgs) -> Result<()> {
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect();
 
+    // Filter events based on date criteria
     let filtered: Vec<&Event> = if args.today {
         let today = Local::now().date_naive();
         events.iter()
             .filter(|e| e.timestamp.with_timezone(&Local).date_naive() == today)
             .collect()
+    } else if args.yesterday {
+        let yesterday = Local::now().date_naive().pred_opt().unwrap();
+        events.iter()
+            .filter(|e| e.timestamp.with_timezone(&Local).date_naive() == yesterday)
+            .collect()
+    } else if let Some(ref date_str) = args.date {
+        if let Ok(target_date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+            events.iter()
+                .filter(|e| e.timestamp.with_timezone(&Local).date_naive() == target_date)
+                .collect()
+        } else {
+            eprintln!("Invalid date format. Use YYYY-MM-DD");
+            return Ok(());
+        }
     } else {
         events.iter().collect()
     };
 
+    if filtered.is_empty() {
+        println!("No activity found for the specified period.");
+        return Ok(());
+    }
+
     println!("{}", "Activity Timeline".bold().cyan());
     println!();
 
+    // Show in reverse chronological order (most recent first)
     for event in filtered.iter().rev().take(args.limit) {
-        let time = event.timestamp.with_timezone(&Local).format("%H:%M:%S");
+        let time = event.timestamp.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S");
         let project = event.project.as_ref()
             .map(|p| format!("[{}]", p.cyan()))
             .unwrap_or_else(|| "".to_string());
