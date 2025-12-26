@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand, Args};
 #[derive(Parser, Debug)]
 #[command(name = "trail")]
 #[command(author = "リッキー")]
-#[command(version = "0.1.0")]
+#[command(version = "0.1.1")]
 #[command(about = "Terminal activity time-machine", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
