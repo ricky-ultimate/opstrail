@@ -63,7 +63,7 @@ jobs:
           mkdir $NAME
           cp "target/${{ matrix.target }}/release/trail" "$NAME/"
           cp README.md LICENSE "$NAME/"
-          cp install-opstrail.ps1 "$NAME/" || true
+          cp install.sh "$NAME/"
           tar -czf "$NAME.tar.gz" "$NAME"
           echo "ASSET=$NAME.tar.gz" >> $GITHUB_ENV
 
