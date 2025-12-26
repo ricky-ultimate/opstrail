@@ -247,6 +247,7 @@ pub fn timeline(args: TimelineArgs) -> Result<()> {
 }
 
 pub fn resume() -> Result<()> {
+    let config = Config::load()?;
     let timeline_path = Config::timeline_path()?;
 
     if !timeline_path.exists() {
@@ -283,7 +284,17 @@ pub fn resume() -> Result<()> {
         }
 
         println!();
-        println!("To resume: {}", format!("cd {}", event.cwd.as_ref().unwrap()).cyan());
+
+        // Check auto_cd configuration
+        if config.auto_cd.resume {
+            // Auto-cd enabled: just print the path for shell integration to use
+            println!("{}", event.cwd.as_ref().unwrap());
+        } else {
+            // Auto-cd disabled: show manual instructions
+            println!("To resume: {}", format!("cd {}", event.cwd.as_ref().unwrap()).cyan());
+            println!();
+            println!("{}", "Tip: Enable auto-cd in ~/.opstrail/config.json".dimmed());
+        }
     } else {
         println!("No previous session found.");
     }

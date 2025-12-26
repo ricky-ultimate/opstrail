@@ -7,6 +7,29 @@ use std::path::PathBuf;
 pub struct Config {
     pub idle_timeout_minutes: u64,
     pub enable_projwarp_integration: bool,
+    #[serde(default)]
+    pub auto_cd: AutoCdConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoCdConfig {
+    #[serde(default = "default_true")]
+    pub back: bool,
+    #[serde(default = "default_true")]
+    pub resume: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+impl Default for AutoCdConfig {
+    fn default() -> Self {
+        Self {
+            back: true,
+            resume: true,
+        }
+    }
 }
 
 impl Default for Config {
@@ -14,6 +37,7 @@ impl Default for Config {
         Self {
             idle_timeout_minutes: 10,
             enable_projwarp_integration: true,
+            auto_cd: AutoCdConfig::default(),
         }
     }
 }

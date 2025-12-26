@@ -98,7 +98,7 @@ function global:trail-resume {
     }
 }
 
-# Override trail command to auto-cd for back/resume
+# Override trail command to respect auto-cd config
 function global:trail {
     param(
         [Parameter(Position=0)]
@@ -108,39 +108,87 @@ function global:trail {
         [string[]]$args
     )
 
-    # For 'back' command, automatically cd
+    # For 'back' command, check config for auto-cd
     if ($subcommand -eq "back" -and $args.Count -gt 0) {
         $when = $args[0]
-        $path = & trail.exe back $when 2>$null
 
-        if ($LASTEXITCODE -eq 0 -and $path -and (Test-Path $path)) {
-            Set-Location $path
-            Write-Host "Jumped back $when to: $path" -ForegroundColor Green
+        # Check if auto-cd is enabled for 'back'
+        $configPath = Join-Path $env:USERPROFILE ".opstrail\config.json"
+        $autoCdEnabled = $true  # Default to true
+
+        if (Test-Path $configPath) {
+            try {
+                $config = Get-Content $configPath | ConvertFrom-Json
+                if ($null -ne $config.auto_cd -and $null -ne $config.auto_cd.back) {
+                    $autoCdEnabled = $config.auto_cd.back
+                }
+            } catch {
+                # If config parse fails, use default (true)
+            }
+        }
+
+        if ($autoCdEnabled) {
+            # Auto-cd enabled: change directory
+            $path = & trail.exe back $when 2>$null
+
+            if ($LASTEXITCODE -eq 0 -and $path -and (Test-Path $path)) {
+                Set-Location $path
+                Write-Host "Jumped back $when to: $path" -ForegroundColor Green
+            } else {
+                Write-Host "No activity found for '$when'" -ForegroundColor Red
+            }
         } else {
-            Write-Host "No activity found for '$when'" -ForegroundColor Red
+            # Auto-cd disabled: just show the path
+            & trail.exe back $when
         }
         return
     }
 
-    # For 'resume' command, show info and prompt to jump
+    # For 'resume' command, check config for auto-cd
     if ($subcommand -eq "resume") {
-        $output = & trail.exe resume 2>&1
-        $pathLine = $output | Select-String -Pattern "Path:\s*(.+)"
+        # Check if auto-cd is enabled for 'resume'
+        $configPath = Join-Path $env:USERPROFILE ".opstrail\config.json"
+        $autoCdEnabled = $true  # Default to true
 
-        if ($pathLine) {
-            Write-Host $output
-            $path = $pathLine.Matches.Groups[1].Value.Trim()
-
-            if (Test-Path $path) {
-                Write-Host ""
-                $response = Read-Host "Jump to this location? (y/n)"
-                if ($response -eq 'y' -or $response -eq 'Y') {
-                    Set-Location $path
-                    Write-Host "Resumed at: $path" -ForegroundColor Green
+        if (Test-Path $configPath) {
+            try {
+                $config = Get-Content $configPath | ConvertFrom-Json
+                if ($null -ne $config.auto_cd -and $null -ne $config.auto_cd.resume) {
+                    $autoCdEnabled = $config.auto_cd.resume
                 }
+            } catch {
+                # If config parse fails, use default (true)
+            }
+        }
+
+        if ($autoCdEnabled) {
+            # Auto-cd enabled: show output and prompt to jump
+            $output = & trail.exe resume 2>&1
+            $pathLine = $output | Select-String -Pattern "^[A-Z]:"
+
+            if ($pathLine) {
+                # Extract the last line which should be the path
+                $path = $pathLine.Matches.Value | Select-Object -Last 1
+
+                if (Test-Path $path) {
+                    # Show the resume info first
+                    $output | Where-Object { $_ -notmatch "^[A-Z]:" } | ForEach-Object { Write-Host $_ }
+
+                    Write-Host ""
+                    $response = Read-Host "Jump to this location? (y/n)"
+                    if ($response -eq 'y' -or $response -eq 'Y') {
+                        Set-Location $path
+                        Write-Host "Resumed at: $path" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host $output
+                }
+            } else {
+                Write-Host $output
             }
         } else {
-            Write-Host $output
+            # Auto-cd disabled: just show the output
+            & trail.exe resume
         }
         return
     }

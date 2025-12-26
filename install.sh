@@ -141,6 +141,34 @@ trail-resume() {
     fi
 }
 
+# Helper function to check auto_cd config
+_opstrail_check_auto_cd() {
+    local feature="$1"  # 'back' or 'resume'
+    local config_file="$HOME/.opstrail/config.json"
+
+    # Default to true if config doesn't exist or can't be parsed
+    if [ ! -f "$config_file" ]; then
+        echo "true"
+        return
+    fi
+
+    # Try to parse JSON (requires jq, python, or fallback to grep)
+    if command -v jq >/dev/null 2>&1; then
+        local result=$(jq -r ".auto_cd.$feature // true" "$config_file" 2>/dev/null)
+        echo "${result:-true}"
+    elif command -v python3 >/dev/null 2>&1; then
+        local result=$(python3 -c "import json; print(json.load(open('$config_file')).get('auto_cd', {}).get('$feature', True))" 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        echo "${result:-true}"
+    else
+        # Fallback: simple grep (may have false positives but safe default is true)
+        if grep -q "\"$feature\".*:.*false" "$config_file" 2>/dev/null; then
+            echo "false"
+        else
+            echo "true"
+        fi
+    fi
+}
+
 # Override trail command for auto-cd on back/resume
 trail() {
     local subcommand="$1"
@@ -150,40 +178,60 @@ trail() {
         back)
             if [ $# -gt 0 ]; then
                 local when="$1"
-                local path
+                local auto_cd_enabled=$(_opstrail_check_auto_cd "back")
 
-                path=$(command trail back "$when" 2>/dev/null)
+                if [ "$auto_cd_enabled" = "true" ]; then
+                    # Auto-cd enabled: change directory
+                    local path
+                    path=$(command trail back "$when" 2>/dev/null)
 
-                if [ $? -eq 0 ] && [ -n "$path" ] && [ -d "$path" ]; then
-                    cd "$path" || return 1
-                    echo "Jumped back $when to: $path"
+                    if [ $? -eq 0 ] && [ -n "$path" ] && [ -d "$path" ]; then
+                        cd "$path" || return 1
+                        echo "Jumped back $when to: $path"
+                    else
+                        echo "No activity found for '$when'" >&2
+                        return 1
+                    fi
                 else
-                    echo "No activity found for '\''$when'\''" >&2
-                    return 1
+                    # Auto-cd disabled: just show the path
+                    command trail back "$when"
                 fi
             else
                 command trail back "$@"
             fi
             ;;
         resume)
-            local output
-            local path
-            local response
+            local auto_cd_enabled=$(_opstrail_check_auto_cd "resume")
 
-            output=$(command trail resume 2>&1)
-            echo "$output"
+            if [ "$auto_cd_enabled" = "true" ]; then
+                # Auto-cd enabled: show output and prompt to jump
+                local output
+                local path
+                local response
 
-            path=$(echo "$output" | grep -oP "Path:\s*\K.+$" | head -1 | xargs)
+                output=$(command trail resume 2>&1)
 
-            if [ -n "$path" ] && [ -d "$path" ]; then
-                echo ""
-                read -p "Jump to this location? (y/n) " -n 1 -r response
-                echo ""
+                # Extract path - it should be a line starting with /
+                path=$(echo "$output" | grep -E "^/" | tail -1)
 
-                if [[ $response =~ ^[Yy]$ ]]; then
-                    cd "$path" || return 1
-                    echo "Resumed at: $path"
+                if [ -n "$path" ] && [ -d "$path" ]; then
+                    # Show the resume info (excluding the path line)
+                    echo "$output" | grep -v "^/"
+
+                    echo ""
+                    read -p "Jump to this location? (y/n) " -n 1 -r response
+                    echo ""
+
+                    if [[ $response =~ ^[Yy]$ ]]; then
+                        cd "$path" || return 1
+                        echo "Resumed at: $path"
+                    fi
+                else
+                    echo "$output"
                 fi
+            else
+                # Auto-cd disabled: just show the output
+                command trail resume
             fi
             ;;
         *)

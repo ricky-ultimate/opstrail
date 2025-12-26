@@ -397,6 +397,55 @@ Edit `~/.opstrail/config.json`:
 | `idle_timeout_minutes` | `10` | Minutes of inactivity to mark as idle |
 | `enable_projwarp_integration` | `true` | Auto-detect projects from projwarp |
 
+### Auto-CD Behavior
+
+Control whether `trail back` and `trail resume` automatically change your directory:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `auto_cd.back` | `true` | Auto-cd for `trail back` |
+| `auto_cd.resume` | `true` | Auto-cd for `trail resume` |
+
+Example:
+```json
+{
+  "auto_cd": {
+    "back": true,
+    "resume": false
+  }
+}
+```
+
+**Disable auto-cd if you prefer explicit control:**
+- `trail back 1h` will print the path instead of changing directory
+- `trail resume` will show manual instructions
+
+### Commands Reference
+Update `trail back` and `trail resume` descriptions to mention config.
+
+## Why This Matters
+
+### Problem Solved
+- Some users don't like unexpected directory changes
+- Scripting scenarios need predictable behavior
+- Teams may have policies against auto-cd
+- Advanced users want explicit control
+
+### Solution Benefits
+- Backward compatible (default = current behavior)
+- Simple configuration (two boolean flags)
+- Zero breaking changes
+- Clear documentation
+- Graceful fallbacks
+
+## Future Enhancements
+
+Potential additions:
+1. **CLI flag override:** `trail back 1h --no-cd` to temporarily disable
+2. **Per-command defaults:** Different defaults for `back` vs `resume`
+3. **Environment variable:** `OPSTRAIL_AUTO_CD=false` for session-level control
+4. **Confirmation prompt:** `auto_cd.confirm: true` to always ask
+
 ---
 
 ## 🛠️ Shell Integration Details
