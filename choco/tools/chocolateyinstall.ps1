@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'opstrail'
 $toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$url64 = 'https://github.com/ricky-ultimate/opstrail/releases/download/v0.1.0/opstrail-v0.1.0-x86_64-pc-windows-msvc.zip'
+$url64 = 'https://github.com/ricky-ultimate/opstrail/releases/download/v0.1.2/opstrail-windows-x86_64.zip'
 
 $packageArgs = @{
   packageName   = $packageName
@@ -15,13 +15,10 @@ $packageArgs = @{
 Install-ChocolateyZipPackage @packageArgs
 
 # After extraction, move trail.exe to tools directory root if it's in a subdirectory
-$extractedDir = Get-ChildItem -Path $toolsDir -Directory | Where-Object { $_.Name -like "opstrail-*" } | Select-Object -First 1
-if ($extractedDir) {
-    $trailExe = Join-Path $extractedDir.FullName "trail.exe"
-    if (Test-Path $trailExe) {
-        Move-Item -Path $trailExe -Destination $toolsDir -Force
-        Write-Host "Moved trail.exe to $toolsDir"
-    }
+$extractedExe = Get-ChildItem -Path $toolsDir -Filter "trail.exe" -Recurse | Select-Object -First 1
+if ($extractedExe -and $extractedExe.DirectoryName -ne $toolsDir) {
+    Move-Item -Path $extractedExe.FullName -Destination $toolsDir -Force
+    Write-Host "Moved trail.exe to $toolsDir"
 }
 
 # Verify trail.exe exists
