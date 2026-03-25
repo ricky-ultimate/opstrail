@@ -1,5 +1,5 @@
 use crate::cli::{ConfigArgs, ConfigSetArgs, ConfigSubcommand};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::fs;

@@ -28,10 +28,11 @@ pub fn log_event(args: LogArgs) -> Result<()> {
 
     let mut event = Event::new(event_type);
 
-    if let Some(cwd) = args
-        .cwd
-        .or_else(|| std::env::current_dir().ok().map(|p| p.to_string_lossy().to_string()))
-    {
+    if let Some(cwd) = args.cwd.or_else(|| {
+        std::env::current_dir()
+            .ok()
+            .map(|p| p.to_string_lossy().to_string())
+    }) {
         let project = if config.enable_projwarp_integration {
             args.project.or_else(|| ProjWarp::resolve_project(&cwd))
         } else {
@@ -94,10 +95,7 @@ fn write_event(path: &std::path::Path, event: &Event) -> Result<()> {
         std::fs::create_dir_all(parent)?;
     }
 
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)?;
+    let mut file = OpenOptions::new().create(true).append(true).open(path)?;
 
     let json = serde_json::to_string(event)?;
     writeln!(file, "{}", json)?;

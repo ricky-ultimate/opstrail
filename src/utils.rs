@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Local, Utc};
 
 pub fn parse_relative_time(input: &str) -> Result<DateTime<Utc>> {

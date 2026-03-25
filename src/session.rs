@@ -149,12 +149,7 @@ pub fn list_sessions() -> Result<()> {
             format!("#{}", i + 1).dimmed(),
             start_local.format("%Y-%m-%d %H:%M").to_string().yellow(),
             end_local.format("%H:%M").to_string().dimmed(),
-            format!(
-                "{} events, {}m",
-                events.len(),
-                duration.num_minutes()
-            )
-            .dimmed()
+            format!("{} events, {}m", events.len(), duration.num_minutes()).dimmed()
         );
     }
 

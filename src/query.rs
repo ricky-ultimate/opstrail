@@ -319,12 +319,7 @@ pub fn timeline(args: TimelineArgs) -> Result<()> {
             EventType::ProjectDetected { name } => format!("proj {}", name.cyan()),
         };
 
-        println!(
-            "{} {} {}",
-            time.to_string().dimmed(),
-            project,
-            label
-        );
+        println!("{} {} {}", time.to_string().dimmed(), project, label);
     }
 
     Ok(())
@@ -344,10 +339,7 @@ pub fn resume() -> Result<()> {
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect();
 
-    let last_activity = events
-        .iter()
-        .rev()
-        .find(|e| e.cwd.is_some());
+    let last_activity = events.iter().rev().find(|e| e.cwd.is_some());
 
     if let Some(event) = last_activity {
         let cwd = event.cwd.as_ref().unwrap();
@@ -460,7 +452,9 @@ pub fn projects() -> Result<()> {
 
     for event in &events {
         if let Some(ref proj) = event.project {
-            let entry = project_stats.entry(proj.clone()).or_insert((0, String::new()));
+            let entry = project_stats
+                .entry(proj.clone())
+                .or_insert((0, String::new()));
             entry.0 += 1;
             if let Some(ref cwd) = event.cwd {
                 entry.1 = cwd.clone();
@@ -483,7 +477,7 @@ pub fn projects() -> Result<()> {
         }
     } else {
         let mut projects: Vec<_> = project_stats.iter().collect();
-        projects.sort_by(|a, b| b.1 .0.cmp(&a.1 .0));
+        projects.sort_by(|a, b| b.1.0.cmp(&a.1.0));
 
         for (proj, (count, path)) in projects {
             println!("  {} ({} activities)", proj.yellow().bold(), count);

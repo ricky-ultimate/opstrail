@@ -28,9 +28,7 @@ pub fn prune(args: PruneArgs) -> Result<()> {
             continue;
         }
 
-        let keep = if let Ok(event) =
-            serde_json::from_str::<crate::events::Event>(&line)
-        {
+        let keep = if let Ok(event) = serde_json::from_str::<crate::events::Event>(&line) {
             let date = event.timestamp.with_timezone(&Local).date_naive();
             date >= cutoff
         } else {
@@ -45,7 +43,10 @@ pub fn prune(args: PruneArgs) -> Result<()> {
     }
 
     if pruned_count == 0 {
-        println!("Nothing to prune (no events older than {} days).", args.keep_days);
+        println!(
+            "Nothing to prune (no events older than {} days).",
+            args.keep_days
+        );
         return Ok(());
     }
 
@@ -88,10 +89,7 @@ pub fn prune(args: PruneArgs) -> Result<()> {
         pruned_count.to_string().yellow(),
         cutoff.format("%Y-%m-%d")
     );
-    println!(
-        "Retained {} events.",
-        kept.len().to_string().green()
-    );
+    println!("Retained {} events.", kept.len().to_string().green());
     println!(
         "Archive saved to: {}",
         archive_path.display().to_string().dimmed()
