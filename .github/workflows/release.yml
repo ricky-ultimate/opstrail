@@ -81,14 +81,15 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item "target\${{ matrix.target }}\release\${{ matrix.binary }}" "trail.exe"
-          Compress-Archive -Path "trail.exe", "install.ps1", "assets\integration.ps1", "README.md", "LICENSE" -DestinationPath "${{ matrix.archive }}"
+          $files = @("trail.exe", "install.ps1", "assets\integration.ps1", "README.md", "LICENSE")
+          Compress-Archive -Path $files -DestinationPath "${{ matrix.archive }}"
           Remove-Item "trail.exe"
 
-            - name: Upload artifact
-              uses: actions/upload-artifact@v4
-              with:
-                name: ${{ matrix.archive }}
-                path: ${{ matrix.archive }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
 
   release:
     name: Create Release
