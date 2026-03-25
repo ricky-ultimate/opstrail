@@ -12,6 +12,7 @@ pub fn log_event(args: LogArgs) -> Result<()> {
     let timeline_path = Config::timeline_path()?;
 
     let event_type = if args.session_start {
+        SessionManager::new_session()?;
         EventType::SessionStart
     } else if args.session_end {
         EventType::SessionEnd
@@ -27,7 +28,10 @@ pub fn log_event(args: LogArgs) -> Result<()> {
 
     let mut event = Event::new(event_type);
 
-    if let Some(cwd) = args.cwd.or(std::env::current_dir().ok().map(|p| p.to_string_lossy().to_string())) {
+    if let Some(cwd) = args
+        .cwd
+        .or_else(|| std::env::current_dir().ok().map(|p| p.to_string_lossy().to_string()))
+    {
         let project = if config.enable_projwarp_integration {
             args.project.or_else(|| ProjWarp::resolve_project(&cwd))
         } else {
@@ -63,7 +67,9 @@ pub fn add_note(args: NoteArgs) -> Result<()> {
         None
     };
 
-    let mut event = Event::new(EventType::Note { text: args.text.clone() });
+    let mut event = Event::new(EventType::Note {
+        text: args.text.clone(),
+    });
 
     if let Some(cwd) = cwd {
         event = event.with_cwd(cwd);

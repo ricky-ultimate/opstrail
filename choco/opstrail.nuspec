@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>opstrail</id>
-    <version>0.1.0</version>
+    <version>0.1.2</version>
     <packageSourceUrl>https://github.com/ricky-ultimate/opstrail</packageSourceUrl>
     <owners>ricky-ultimate</owners>
     <title>OpsTrail</title>
@@ -26,16 +26,13 @@ Features:
 - Search through your terminal history
 - Analytics and statistics about your work patterns
 - Session management with idle detection
-- Project awareness via projwarp integration
+- Optional projwarp integration (enable via: trail config set enable_projwarp_integration true)
 - Context notes for leaving breadcrumbs
 - PowerShell integration included
-
-Track your terminal activity, search your history, and boost your productivity with OpsTrail.
+- Data pruning with archiving (trail prune)
+- CLI configuration (trail config show / trail config set)
     </description>
     <releaseNotes>https://github.com/ricky-ultimate/opstrail/releases</releaseNotes>
-    <dependencies>
-      <dependency id="projwarp" version="0.1.0" />
-    </dependencies>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />

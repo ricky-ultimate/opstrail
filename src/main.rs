@@ -3,9 +3,13 @@ mod config;
 mod events;
 mod logger;
 mod projwarp;
+mod pruner;
 mod query;
 mod session;
 mod utils;
+
+#[cfg(test)]
+mod tests;
 
 use anyhow::Result;
 use clap::Parser;
@@ -32,6 +36,8 @@ fn run() -> Result<()> {
         Command::Today => query::today()?,
         Command::Sessions => session::list_sessions()?,
         Command::Projects => query::projects()?,
+        Command::Config(args) => config::handle_config_command(args)?,
+        Command::Prune(args) => pruner::prune(args)?,
     }
 
     Ok(())

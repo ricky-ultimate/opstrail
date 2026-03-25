@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# OpsTrail Shell Integration Installer for Bash/Zsh
 
 set -e
 
-# Detect shell
 SHELL_NAME=$(basename "$SHELL")
 SHELL_RC=""
 
@@ -25,20 +23,15 @@ echo "Detected shell: $SHELL_NAME"
 echo "Profile: $SHELL_RC"
 echo ""
 
-# OpsTrail integration code
 OPSTRAIL_INTEGRATION='
 # OpsTrail - Terminal Activity Tracker Integration
 export OPSTRAIL_SESSION_STARTED=0
-
-# Store trail executable path for reliable exit handling
 export OPSTRAIL_TRAIL_PATH=""
 
-# Find and store trail path
 if command -v trail >/dev/null 2>&1; then
     OPSTRAIL_TRAIL_PATH=$(command -v trail)
 fi
 
-# Start session on shell startup
 if [ "$OPSTRAIL_SESSION_STARTED" -eq 0 ]; then
     if [ -n "$OPSTRAIL_TRAIL_PATH" ]; then
         "$OPSTRAIL_TRAIL_PATH" log --session-start 2>/dev/null || true
@@ -48,16 +41,11 @@ if [ "$OPSTRAIL_SESSION_STARTED" -eq 0 ]; then
     export OPSTRAIL_SESSION_STARTED=1
 fi
 
-# Log commands before execution
 opstrail_preexec() {
     local cmd="$1"
-
-    # Skip trail commands to avoid recursion
     case "$cmd" in
         trail*|opstrail*|opstrail_*) return ;;
     esac
-
-    # Log the command using stored path if available
     if [ -n "$OPSTRAIL_TRAIL_PATH" ] && [ -x "$OPSTRAIL_TRAIL_PATH" ]; then
         "$OPSTRAIL_TRAIL_PATH" log --cmd "$cmd" --cwd "$PWD" 2>/dev/null || true
     else
@@ -65,102 +53,56 @@ opstrail_preexec() {
     fi
 }
 
-# Bash: Use DEBUG trap
 if [ -n "$BASH_VERSION" ]; then
-    opstrail_last_cmd=""
+    _opstrail_preexec_done=0
+    _opstrail_last_hist=""
 
-    trap '\''opstrail_last_cmd="$BASH_COMMAND"'\'' DEBUG
-
-    opstrail_log_last() {
-        if [ -n "$opstrail_last_cmd" ]; then
-            opstrail_preexec "$opstrail_last_cmd"
-            opstrail_last_cmd=""
+    opstrail_precmd() {
+        local current_hist
+        current_hist=$(HISTFORMAT="%s|%R"; history 1 2>/dev/null | sed "s/^[ ]*[0-9]*[ ]*//")
+        if [ "$current_hist" != "$_opstrail_last_hist" ] && [ -n "$current_hist" ]; then
+            local cmd="${current_hist#*|}"
+            _opstrail_last_hist="$current_hist"
+            opstrail_preexec "$cmd"
         fi
     }
 
-    PROMPT_COMMAND="opstrail_log_last${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+    PROMPT_COMMAND="opstrail_precmd${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
 fi
 
-# Zsh: Use preexec hook
 if [ -n "$ZSH_VERSION" ]; then
     autoload -U add-zsh-hook
     add-zsh-hook preexec opstrail_preexec
 fi
 
-# Session end on exit - use stored path for reliability
 opstrail_exit() {
     if [ -n "$OPSTRAIL_TRAIL_PATH" ] && [ -x "$OPSTRAIL_TRAIL_PATH" ]; then
         "$OPSTRAIL_TRAIL_PATH" log --session-end 2>/dev/null || true
-    else
-        # Fallback to PATH lookup
-        if command -v trail >/dev/null 2>&1; then
-            trail log --session-end 2>/dev/null || true
-        fi
+    elif command -v trail >/dev/null 2>&1; then
+        trail log --session-end 2>/dev/null || true
     fi
 }
 
 trap opstrail_exit EXIT
 
-# Helper function: Jump back in time
-trail-back() {
-    local when="${1:-30m}"
-    local path
-
-    path=$(trail back "$when" 2>/dev/null)
-
-    if [ $? -eq 0 ] && [ -n "$path" ] && [ -d "$path" ]; then
-        cd "$path" || return 1
-        echo "Jumped back to: $path"
-    else
-        echo "No activity found for that time" >&2
-        return 1
-    fi
-}
-
-# Helper function: Resume last session
-trail-resume() {
-    local output
-    local path
-    local response
-
-    output=$(trail resume 2>&1)
-    echo "$output"
-
-    # Extract path from output
-    path=$(echo "$output" | grep -oP "Path:\s*\K.+$" | head -1 | xargs)
-
-    if [ -n "$path" ] && [ -d "$path" ]; then
-        echo ""
-        read -p "Jump to this location? (y/n) " -n 1 -r response
-        echo ""
-
-        if [[ $response =~ ^[Yy]$ ]]; then
-            cd "$path" || return 1
-            echo "Resumed at: $path"
-        fi
-    fi
-}
-
-# Helper function to check auto_cd config
 _opstrail_check_auto_cd() {
-    local feature="$1"  # 'back' or 'resume'
+    local feature="$1"
     local config_file="$HOME/.opstrail/config.json"
 
-    # Default to true if config doesn't exist or can't be parsed
     if [ ! -f "$config_file" ]; then
         echo "true"
         return
     fi
 
-    # Try to parse JSON (requires jq, python, or fallback to grep)
     if command -v jq >/dev/null 2>&1; then
-        local result=$(jq -r ".auto_cd.$feature // true" "$config_file" 2>/dev/null)
+        local result
+        result=$(jq -r ".auto_cd.$feature // true" "$config_file" 2>/dev/null)
         echo "${result:-true}"
     elif command -v python3 >/dev/null 2>&1; then
-        local result=$(python3 -c "import json; print(json.load(open('$config_file')).get('auto_cd', {}).get('$feature', True))" 2>/dev/null | tr '[:upper:]' '[:lower:]')
+        local result
+        result=$(python3 -c "import json; print(json.load(open(\"$config_file\")).get(\"auto_cd\", {}).get(\"$feature\", True))" 2>/dev/null | tr "[:upper:]" "[:lower:]")
         echo "${result:-true}"
     else
-        # Fallback: simple grep (may have false positives but safe default is true)
         if grep -q "\"$feature\".*:.*false" "$config_file" 2>/dev/null; then
             echo "false"
         else
@@ -169,7 +111,6 @@ _opstrail_check_auto_cd() {
     fi
 }
 
-# Override trail command for auto-cd on back/resume
 trail() {
     local subcommand="$1"
     shift
@@ -178,14 +119,17 @@ trail() {
         back)
             if [ $# -gt 0 ]; then
                 local when="$1"
-                local auto_cd_enabled=$(_opstrail_check_auto_cd "back")
+                local auto_cd_enabled
+                auto_cd_enabled=$(_opstrail_check_auto_cd "back")
 
                 if [ "$auto_cd_enabled" = "true" ]; then
-                    # Auto-cd enabled: change directory
+                    local raw_output
+                    raw_output=$(command trail back "$when" 2>/dev/null)
+                    local exit_code=$?
                     local path
-                    path=$(command trail back "$when" 2>/dev/null)
+                    path=$(echo "$raw_output" | tail -1)
 
-                    if [ $? -eq 0 ] && [ -n "$path" ] && [ -d "$path" ]; then
+                    if [ $exit_code -eq 0 ] && [ -n "$path" ] && [ -d "$path" ]; then
                         cd "$path" || return 1
                         echo "Jumped back $when to: $path"
                     else
@@ -193,7 +137,6 @@ trail() {
                         return 1
                     fi
                 else
-                    # Auto-cd disabled: just show the path
                     command trail back "$when"
                 fi
             else
@@ -201,36 +144,29 @@ trail() {
             fi
             ;;
         resume)
-            local auto_cd_enabled=$(_opstrail_check_auto_cd "resume")
+            local auto_cd_enabled
+            auto_cd_enabled=$(_opstrail_check_auto_cd "resume")
 
             if [ "$auto_cd_enabled" = "true" ]; then
-                # Auto-cd enabled: show output and prompt to jump
-                local output
+                local full_output
+                full_output=$(command trail resume 2>&1)
                 local path
-                local response
+                path=$(echo "$full_output" | tail -1)
+                local info
+                info=$(echo "$full_output" | head -n -1)
 
-                output=$(command trail resume 2>&1)
-
-                # Extract path - it should be a line starting with /
-                path=$(echo "$output" | grep -E "^/" | tail -1)
+                echo "$info"
 
                 if [ -n "$path" ] && [ -d "$path" ]; then
-                    # Show the resume info (excluding the path line)
-                    echo "$output" | grep -v "^/"
-
                     echo ""
                     read -p "Jump to this location? (y/n) " -n 1 -r response
                     echo ""
-
                     if [[ $response =~ ^[Yy]$ ]]; then
                         cd "$path" || return 1
                         echo "Resumed at: $path"
                     fi
-                else
-                    echo "$output"
                 fi
             else
-                # Auto-cd disabled: just show the output
                 command trail resume
             fi
             ;;
@@ -240,10 +176,9 @@ trail() {
     esac
 }
 
-echo "✓ OpsTrail tracking enabled"
+echo "OpsTrail tracking enabled"
 '
 
-# Check if already installed
 if grep -q "OpsTrail - Terminal Activity Tracker" "$SHELL_RC" 2>/dev/null; then
     echo "OpsTrail integration is already installed!"
     read -p "Do you want to reinstall? (y/N) " -n 1 -r
@@ -253,18 +188,16 @@ if grep -q "OpsTrail - Terminal Activity Tracker" "$SHELL_RC" 2>/dev/null; then
         exit 0
     fi
 
-    # Remove old integration
     echo "Removing old integration..."
     sed -i.bak '/# OpsTrail - Terminal Activity Tracker/,/echo.*OpsTrail tracking enabled/d' "$SHELL_RC"
 fi
 
-# Add integration
 echo "Installing OpsTrail integration..."
 echo "" >> "$SHELL_RC"
 echo "$OPSTRAIL_INTEGRATION" >> "$SHELL_RC"
 
 echo ""
-echo "✓ OpsTrail $SHELL_NAME integration installed!"
+echo "OpsTrail $SHELL_NAME integration installed!"
 echo ""
 echo "Reload your shell profile to activate:"
 echo "   source $SHELL_RC"
@@ -273,9 +206,14 @@ echo "Useful commands:"
 echo "   trail today          - Today's summary"
 echo "   trail timeline       - View activity timeline"
 echo "   trail stats          - Activity statistics"
+echo "   trail stats --week   - This week"
+echo "   trail stats --month  - This month"
 echo "   trail search <term>  - Search your history"
-echo "   trail back 1h        - Jump back 1 hour (auto-cd)"
-echo "   trail resume         - Resume last session (with prompt)"
+echo "   trail back 1h        - Jump back 1 hour"
+echo "   trail resume         - Resume last session"
 echo "   trail note <text>    - Add a note"
+echo "   trail config show    - View configuration"
+echo "   trail config set <key> <value>"
+echo "   trail prune          - Remove events older than 90 days"
+echo "   trail prune --dry-run"
 echo ""
-echo "Happy tracking!"

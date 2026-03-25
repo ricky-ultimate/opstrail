@@ -1,9 +1,11 @@
 use crate::config::Config;
 use crate::events::Event;
 use anyhow::Result;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, Local, Utc};
+use colored::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionState {
@@ -47,6 +49,17 @@ impl SessionManager {
         Ok(())
     }
 
+    pub fn new_session() -> Result<String> {
+        let session_id = Self::generate_session_id();
+        let state = SessionState {
+            current_session_id: session_id.clone(),
+            session_start: Utc::now(),
+            last_activity: Utc::now(),
+        };
+        Self::save_state(&state)?;
+        Ok(session_id)
+    }
+
     #[allow(dead_code)]
     pub fn check_idle() -> Result<bool> {
         let config = Config::load()?;
@@ -66,12 +79,12 @@ impl SessionManager {
     }
 
     fn generate_session_id() -> String {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        format!("session_{}", timestamp)
+        Uuid::new_v4().to_string()
+    }
+
+    #[cfg(test)]
+    pub fn generate_session_id_pub() -> String {
+        Self::generate_session_id()
     }
 
     fn save_state(state: &SessionState) -> Result<()> {
@@ -111,18 +124,37 @@ pub fn list_sessions() -> Result<()> {
         }
     }
 
-    println!("Sessions:");
-    for (_session_id, events) in sessions.iter() {
+    let mut session_list: Vec<(String, Vec<&Event>)> = sessions.into_iter().collect();
+    session_list.sort_by_key(|(_, events)| {
+        events
+            .first()
+            .map(|e| e.timestamp)
+            .unwrap_or(DateTime::<Utc>::MIN_UTC)
+    });
+    session_list.reverse();
+
+    println!("{}", "Sessions".bold().cyan());
+    println!();
+
+    for (i, (_, events)) in session_list.iter().enumerate() {
         let start = events.first().map(|e| e.timestamp).unwrap();
         let end = events.last().map(|e| e.timestamp).unwrap();
         let duration = end - start;
 
+        let start_local = start.with_timezone(&Local);
+        let end_local = end.with_timezone(&Local);
+
         println!(
-            "  {} - {} ({} events, {} minutes)",
-            start.format("%Y-%m-%d %H:%M"),
-            end.format("%H:%M"),
-            events.len(),
-            duration.num_minutes()
+            "  {} {}  {}  {}",
+            format!("#{}", i + 1).dimmed(),
+            start_local.format("%Y-%m-%d %H:%M").to_string().yellow(),
+            end_local.format("%H:%M").to_string().dimmed(),
+            format!(
+                "{} events, {}m",
+                events.len(),
+                duration.num_minutes()
+            )
+            .dimmed()
         );
     }
 

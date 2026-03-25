@@ -1,37 +1,25 @@
-# OpsTrail PowerShell Integration Installer
-
 $OpsTrailIntegration = @'
 
 # OpsTrail - Terminal Activity Tracker Integration
 $global:OpsTrailSessionStarted = $false
 
-# Start session on profile load
 if (-not $global:OpsTrailSessionStarted) {
     & trail log --session-start 2>$null
     $global:OpsTrailSessionStarted = $true
 }
 
-# Capture command history after execution
 function global:OpsTrail-LogCommand {
-    # Get the last command from history
     $lastCmd = Get-History -Count 1 -ErrorAction SilentlyContinue
-
     if ($lastCmd) {
         $cmd = $lastCmd.CommandLine
-
-        # Skip trail commands to avoid recursion
         if ($cmd -like "trail *" -or $cmd -like "opstrail *" -or $cmd -like "*OpsTrail*") {
             return
         }
-
         $cwd = $PWD.Path
-
-        # Log the command
         & trail log --cmd "$cmd" --cwd "$cwd" 2>$null
     }
 }
 
-# Wrap the prompt to log after each command
 $global:OpsTrail_OriginalPrompt = $function:prompt
 
 function global:prompt {
@@ -39,14 +27,11 @@ function global:prompt {
     & $global:OpsTrail_OriginalPrompt
 }
 
-# Register session end on exit
-# Store trail path to ensure it's accessible during exit
 $global:OpsTrail_TrailPath = (Get-Command trail -ErrorAction SilentlyContinue).Source
 if (-not $global:OpsTrail_TrailPath) {
     $global:OpsTrail_TrailPath = (Get-Command trail.exe -ErrorAction SilentlyContinue).Source
 }
 
-# Create the action as a script block that captures the path
 $exitAction = [scriptblock]::Create(@"
     try {
         `$trailPath = '$($global:OpsTrail_TrailPath)'
@@ -55,14 +40,11 @@ $exitAction = [scriptblock]::Create(@"
         } else {
             & trail log --session-end 2>`$null
         }
-    } catch {
-        # Silently fail - we're exiting anyway
-    }
+    } catch {}
 "@)
 
 Register-EngineEvent PowerShell.Exiting -Action $exitAction | Out-Null
 
-# Helper function: Jump back in time
 function global:trail-back {
     param([string]$when = "30m")
     $path = & trail back $when 2>$null
@@ -74,47 +56,37 @@ function global:trail-back {
     }
 }
 
-# Helper function: Resume last session
 function global:trail-resume {
-    $output = & trail resume 2>&1
+    $fullOutput = & trail resume 2>&1
+    $lines = $fullOutput -split "`n"
+    $path = $lines | Select-Object -Last 1
+    $info = $lines | Select-Object -SkipLast 1
 
-    # Extract path from resume output
-    $pathLine = $output | Select-String -Pattern "Path:\s*(.+)"
+    Write-Host ($info -join "`n")
 
-    if ($pathLine) {
-        Write-Host $output
-        $path = $pathLine.Matches.Groups[1].Value.Trim()
-
-        if (Test-Path $path) {
-            Write-Host ""
-            $response = Read-Host "Jump to this location? (y/n)"
-            if ($response -eq 'y' -or $response -eq 'Y') {
-                Set-Location $path
-                Write-Host "Resumed at: $path" -ForegroundColor Green
-            }
+    if ($path -and (Test-Path $path)) {
+        Write-Host ""
+        $response = Read-Host "Jump to this location? (y/n)"
+        if ($response -eq 'y' -or $response -eq 'Y') {
+            Set-Location $path
+            Write-Host "Resumed at: $path" -ForegroundColor Green
         }
-    } else {
-        Write-Host $output
     }
 }
 
-# Override trail command to respect auto-cd config
 function global:trail {
     param(
         [Parameter(Position=0)]
         [string]$subcommand,
 
         [Parameter(Position=1, ValueFromRemainingArguments=$true)]
-        [string[]]$args
+        [string[]]$remainingArgs
     )
 
-    # For 'back' command, check config for auto-cd
-    if ($subcommand -eq "back" -and $args.Count -gt 0) {
-        $when = $args[0]
-
-        # Check if auto-cd is enabled for 'back'
+    if ($subcommand -eq "back" -and $remainingArgs.Count -gt 0) {
+        $when = $remainingArgs[0]
         $configPath = Join-Path $env:USERPROFILE ".opstrail\config.json"
-        $autoCdEnabled = $true  # Default to true
+        $autoCdEnabled = $true
 
         if (Test-Path $configPath) {
             try {
@@ -122,14 +94,12 @@ function global:trail {
                 if ($null -ne $config.auto_cd -and $null -ne $config.auto_cd.back) {
                     $autoCdEnabled = $config.auto_cd.back
                 }
-            } catch {
-                # If config parse fails, use default (true)
-            }
+            } catch {}
         }
 
         if ($autoCdEnabled) {
-            # Auto-cd enabled: change directory
-            $path = & trail.exe back $when 2>$null
+            $rawOutput = & trail.exe back $when 2>$null
+            $path = ($rawOutput -split "`n" | Select-Object -Last 1).Trim()
 
             if ($LASTEXITCODE -eq 0 -and $path -and (Test-Path $path)) {
                 Set-Location $path
@@ -138,17 +108,14 @@ function global:trail {
                 Write-Host "No activity found for '$when'" -ForegroundColor Red
             }
         } else {
-            # Auto-cd disabled: just show the path
             & trail.exe back $when
         }
         return
     }
 
-    # For 'resume' command, check config for auto-cd
     if ($subcommand -eq "resume") {
-        # Check if auto-cd is enabled for 'resume'
         $configPath = Join-Path $env:USERPROFILE ".opstrail\config.json"
-        $autoCdEnabled = $true  # Default to true
+        $autoCdEnabled = $true
 
         if (Test-Path $configPath) {
             try {
@@ -156,57 +123,42 @@ function global:trail {
                 if ($null -ne $config.auto_cd -and $null -ne $config.auto_cd.resume) {
                     $autoCdEnabled = $config.auto_cd.resume
                 }
-            } catch {
-                # If config parse fails, use default (true)
-            }
+            } catch {}
         }
 
         if ($autoCdEnabled) {
-            # Auto-cd enabled: show output and prompt to jump
-            $output = & trail.exe resume 2>&1
-            $pathLine = $output | Select-String -Pattern "^[A-Z]:"
+            $fullOutput = & trail.exe resume 2>&1
+            $lines = $fullOutput -split "`n"
+            $path = ($lines | Select-Object -Last 1).Trim()
+            $info = $lines | Select-Object -SkipLast 1
 
-            if ($pathLine) {
-                # Extract the last line which should be the path
-                $path = $pathLine.Matches.Value | Select-Object -Last 1
+            Write-Host ($info -join "`n")
 
-                if (Test-Path $path) {
-                    # Show the resume info first
-                    $output | Where-Object { $_ -notmatch "^[A-Z]:" } | ForEach-Object { Write-Host $_ }
-
-                    Write-Host ""
-                    $response = Read-Host "Jump to this location? (y/n)"
-                    if ($response -eq 'y' -or $response -eq 'Y') {
-                        Set-Location $path
-                        Write-Host "Resumed at: $path" -ForegroundColor Green
-                    }
-                } else {
-                    Write-Host $output
+            if ($path -and (Test-Path $path)) {
+                Write-Host ""
+                $response = Read-Host "Jump to this location? (y/n)"
+                if ($response -eq 'y' -or $response -eq 'Y') {
+                    Set-Location $path
+                    Write-Host "Resumed at: $path" -ForegroundColor Green
                 }
-            } else {
-                Write-Host $output
             }
         } else {
-            # Auto-cd disabled: just show the output
             & trail.exe resume
         }
         return
     }
 
-    # For all other commands, pass through to the real trail executable
-    & trail.exe $subcommand @args
+    & trail.exe $subcommand @remainingArgs
 }
 
 Write-Host "OpsTrail tracking enabled" -ForegroundColor Cyan
 '@
 
-# Check if profile exists
 if (-not (Test-Path $PROFILE)) {
     New-Item -ItemType File -Path $PROFILE -Force | Out-Null
     Write-Host "Created PowerShell profile at: $PROFILE" -ForegroundColor Green
 }
 
-# Check if already installed
 $profileContent = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
 
 if ($profileContent -like "*OpsTrail*") {
@@ -215,13 +167,10 @@ if ($profileContent -like "*OpsTrail*") {
     if ($response -ne 'y' -and $response -ne 'Y') {
         exit
     }
-
-    # Remove old integration
     $profileContent = $profileContent -replace '(?s)# OpsTrail.*?Write-Host.*OpsTrail tracking enabled.*?\n', ''
     Set-Content $PROFILE $profileContent.Trim()
 }
 
-# Add integration
 Add-Content $PROFILE "`n$OpsTrailIntegration"
 
 Write-Host ""
@@ -231,12 +180,17 @@ Write-Host "Reload your profile to activate:" -ForegroundColor Cyan
 Write-Host "  . `$PROFILE" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Useful commands:" -ForegroundColor Cyan
-Write-Host "  trail today          - Today summary" -ForegroundColor White
-Write-Host "  trail timeline       - View activity timeline" -ForegroundColor White
-Write-Host "  trail stats          - Activity statistics" -ForegroundColor White
-Write-Host "  trail search <term>  - Search your history" -ForegroundColor White
-Write-Host "  trail back 1h        - Where was I an hour ago" -ForegroundColor White
-Write-Host "  trail-back 30m       - Jump back 30 minutes" -ForegroundColor White
-Write-Host "  trail-resume         - Resume last session" -ForegroundColor White
-Write-Host "  trail note <text>    - Add a note" -ForegroundColor White
+Write-Host "  trail today                      - Today summary" -ForegroundColor White
+Write-Host "  trail timeline                   - View activity timeline" -ForegroundColor White
+Write-Host "  trail stats                      - Activity statistics (last 30 days)" -ForegroundColor White
+Write-Host "  trail stats --week               - This week" -ForegroundColor White
+Write-Host "  trail stats --month              - This month" -ForegroundColor White
+Write-Host "  trail search <term>              - Search your history" -ForegroundColor White
+Write-Host "  trail back 1h                    - Where was I an hour ago" -ForegroundColor White
+Write-Host "  trail resume                     - Resume last session" -ForegroundColor White
+Write-Host "  trail note <text>                - Add a note" -ForegroundColor White
+Write-Host "  trail config show                - View configuration" -ForegroundColor White
+Write-Host "  trail config set <key> <value>   - Change a setting" -ForegroundColor White
+Write-Host "  trail prune                      - Remove events older than 90 days" -ForegroundColor White
+Write-Host "  trail prune --dry-run            - Preview what would be pruned" -ForegroundColor White
 Write-Host ""
