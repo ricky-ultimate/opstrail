@@ -34,7 +34,8 @@ Features:
     </description>
     <releaseNotes>https://github.com/ricky-ultimate/opstrail/releases</releaseNotes>
   </metadata>
-  <files>
-    <file src="tools\**" target="tools" />
-  </files>
+<files>
+  <file src="tools\**" target="tools" />
+  <file src="..\assets\integration.ps1" target="tools" />
+</files>
 </package>
