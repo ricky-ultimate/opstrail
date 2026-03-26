@@ -1,9 +1,17 @@
 use crate::cli::{ConfigArgs, ConfigSetArgs, ConfigSubcommand};
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+
+#[cfg(test)]
+use std::cell::RefCell;
+
+#[cfg(test)]
+thread_local! {
+    static TEST_TIMELINE_PATH: RefCell<Option<PathBuf>> = RefCell::new(None);
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -63,12 +71,9 @@ impl Config {
     pub fn save(&self) -> Result<()> {
         let path = Self::config_path()?;
         let dir = path.parent().unwrap();
-
         fs::create_dir_all(dir)?;
-
         let contents = serde_json::to_string_pretty(self)?;
         fs::write(&path, contents)?;
-
         Ok(())
     }
 
@@ -83,11 +88,23 @@ impl Config {
     }
 
     pub fn timeline_path() -> Result<PathBuf> {
+        #[cfg(test)]
+        {
+            let override_path = TEST_TIMELINE_PATH.with(|p| p.borrow().clone());
+            if let Some(path) = override_path {
+                return Ok(path);
+            }
+        }
         Ok(Self::data_dir()?.join("timeline.jsonl"))
     }
 
     pub fn state_path() -> Result<PathBuf> {
         Ok(Self::data_dir()?.join("state.json"))
+    }
+
+    #[cfg(test)]
+    pub fn timeline_path_override_for_test(path: PathBuf) {
+        TEST_TIMELINE_PATH.with(|p| *p.borrow_mut() = Some(path));
     }
 }
 
@@ -173,30 +190,4 @@ fn set_config(args: ConfigSetArgs) -> Result<()> {
     println!("Set {} = {}", args.key.green(), args.value.yellow());
 
     Ok(())
-}
-
-#[cfg(test)]
-use std::cell::RefCell;
-
-#[cfg(test)]
-thread_local! {
-    static TEST_TIMELINE_PATH: RefCell<Option<std::path::PathBuf>> = RefCell::new(None);
-}
-
-impl Config {
-    #[cfg(test)]
-    pub fn timeline_path_override_for_test(path: std::path::PathBuf) {
-        TEST_TIMELINE_PATH.with(|p| *p.borrow_mut() = Some(path));
-    }
-
-    pub fn timeline_path() -> Result<std::path::PathBuf> {
-        #[cfg(test)]
-        {
-            let override_path = TEST_TIMELINE_PATH.with(|p| p.borrow().clone());
-            if let Some(path) = override_path {
-                return Ok(path);
-            }
-        }
-        Ok(Self::data_dir()?.join("timeline.jsonl"))
-    }
 }

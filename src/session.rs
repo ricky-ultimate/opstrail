@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::events::Event;
-use anyhow::{Result, anyhow};
-use chrono::{DateTime, Duration, Local, Utc};
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Local, Utc};
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
