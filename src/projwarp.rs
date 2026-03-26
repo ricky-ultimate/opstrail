@@ -36,18 +36,15 @@ impl ProjWarp {
 
         for (alias, project_path) in &config.projects {
             let normalized_project = project_path.replace('\\', "/");
-            if normalized_path.starts_with(&normalized_project) {
+            if normalized_path.starts_with(&normalized_project)
+                && (normalized_path.len() == normalized_project.len()
+                    || normalized_path[normalized_project.len()..].starts_with('/'))
+            {
                 return Some(alias.clone());
             }
         }
 
         None
-    }
-
-    #[allow(dead_code)]
-    pub fn get_project_path(alias: &str) -> Option<String> {
-        let config = Self::load()?;
-        config.projects.get(alias).cloned()
     }
 
     fn config_path() -> Option<PathBuf> {
