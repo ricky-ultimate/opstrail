@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::events::Event;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Local, Utc};
 use colored::*;
 use serde::{Deserialize, Serialize};
@@ -25,14 +25,16 @@ impl SessionManager {
             let state: SessionState = serde_json::from_str(&contents)?;
             Ok(state.current_session_id)
         } else {
-            let session_id = Self::generate_session_id();
-            let state = SessionState {
-                current_session_id: session_id.clone(),
-                session_start: Utc::now(),
-                last_activity: Utc::now(),
-            };
-            Self::save_state(&state)?;
-            Ok(session_id)
+            Err(anyhow!(
+                "No active session. Start a session with: trail log --session-start"
+            ))
+        }
+    }
+
+    pub fn current_session_id_or_create() -> Result<String> {
+        match Self::current_session_id() {
+            Ok(id) => Ok(id),
+            Err(_) => Self::new_session(),
         }
     }
 
@@ -58,24 +60,6 @@ impl SessionManager {
         };
         Self::save_state(&state)?;
         Ok(session_id)
-    }
-
-    #[allow(dead_code)]
-    pub fn check_idle() -> Result<bool> {
-        let config = Config::load()?;
-        let state_path = Config::state_path()?;
-
-        if !state_path.exists() {
-            return Ok(false);
-        }
-
-        let contents = fs::read_to_string(&state_path)?;
-        let state: SessionState = serde_json::from_str(&contents)?;
-
-        let idle_duration = Utc::now() - state.last_activity;
-        let idle_threshold = Duration::minutes(config.idle_timeout_minutes as i64);
-
-        Ok(idle_duration > idle_threshold)
     }
 
     fn generate_session_id() -> String {

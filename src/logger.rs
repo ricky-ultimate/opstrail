@@ -45,7 +45,7 @@ pub fn log_event(args: LogArgs) -> Result<()> {
         }
     }
 
-    let session_id = SessionManager::current_session_id()?;
+    let session_id = SessionManager::current_session_id_or_create()?;
     event = event.with_session(session_id);
 
     write_event(&timeline_path, &event)?;
@@ -80,7 +80,7 @@ pub fn add_note(args: NoteArgs) -> Result<()> {
         event = event.with_project(project);
     }
 
-    let session_id = SessionManager::current_session_id()?;
+    let session_id = SessionManager::current_session_id_or_create()?;
     event = event.with_session(session_id);
 
     write_event(&timeline_path, &event)?;
