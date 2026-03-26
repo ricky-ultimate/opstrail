@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'opstrail'
 $toolsDir    = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$url64       = 'https://github.com/ricky-ultimate/opstrail/releases/download/v0.1.2/opstrail-windows-x86_64.zip'
+$url64       = 'https://github.com/ricky-ultimate/opstrail/releases/download/v0.1.3/opstrail-windows-x86_64.zip'
 
 $packageArgs = @{
   packageName    = $packageName
