@@ -32,13 +32,13 @@ pub fn time_travel(args: BackArgs) -> Result<()> {
 
     if let Some(event) = target_event {
         if let Some(ref cwd) = event.cwd {
-            let time_diff = target_time - event.timestamp;
-            if time_diff.num_hours() < 24 {
+            let staleness = chrono::Utc::now() - event.timestamp;
+            if staleness.num_hours() < 24 {
                 println!("{}", cwd);
             } else {
                 eprintln!(
                     "No recent activity found for that time (closest match was {} ago)",
-                    utils::format_duration(time_diff)
+                    utils::format_duration(staleness)
                 );
                 std::process::exit(1);
             }
@@ -50,6 +50,7 @@ pub fn time_travel(args: BackArgs) -> Result<()> {
 
     Ok(())
 }
+
 
 pub fn search(args: SearchArgs) -> Result<()> {
     let timeline_path = Config::timeline_path()?;
