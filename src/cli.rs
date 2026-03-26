@@ -29,9 +29,6 @@ pub enum Command {
 #[derive(Args, Debug)]
 pub struct LogArgs {
     #[arg(long)]
-    pub event: Option<String>,
-
-    #[arg(long)]
     pub cmd: Option<String>,
 
     #[arg(long)]

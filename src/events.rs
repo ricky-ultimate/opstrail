@@ -49,19 +49,3 @@ impl Event {
         self
     }
 }
-
-impl EventType {
-    #[allow(dead_code)]
-    pub fn display_name(&self) -> &str {
-        match self {
-            EventType::Command { .. } => "command",
-            EventType::DirectoryChange { .. } => "cd",
-            EventType::SessionStart => "session_start",
-            EventType::SessionEnd => "session_end",
-            EventType::IdleStart => "idle_start",
-            EventType::IdleEnd => "idle_end",
-            EventType::Note { .. } => "note",
-            EventType::ProjectDetected { .. } => "project",
-        }
-    }
-}

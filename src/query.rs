@@ -4,7 +4,7 @@ use crate::events::{Event, EventType};
 use crate::projwarp::ProjWarp;
 use crate::utils;
 use anyhow::Result;
-use chrono::{Local, NaiveDate};
+use chrono::{Datelike, Local, NaiveDate};
 use colored::*;
 use std::collections::HashMap;
 use std::fs;
@@ -489,5 +489,3 @@ pub fn projects() -> Result<()> {
 
     Ok(())
 }
-
-use chrono::Datelike;
