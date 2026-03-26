@@ -1,6 +1,6 @@
 use crate::cli::PruneArgs;
 use crate::config::Config;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::Local;
 use colored::*;
 use std::fs;
@@ -78,10 +78,21 @@ pub fn prune(args: PruneArgs) -> Result<()> {
     let mut out = fs::OpenOptions::new()
         .write(true)
         .truncate(true)
-        .open(&timeline_path)?;
+        .open(&timeline_path)
+        .with_context(|| {
+            format!(
+                "Failed to write pruned timeline. Original data archived at: {}",
+                archive_path.display()
+            )
+        })?;
 
     for line in &kept {
-        writeln!(out, "{}", line)?;
+        writeln!(out, "{}", line).with_context(|| {
+            format!(
+                "Failed to write pruned timeline. Original data archived at: {}",
+                archive_path.display()
+            )
+        })?;
     }
 
     println!(
