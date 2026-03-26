@@ -2,6 +2,7 @@
 mod tests {
     use crate::cli::PruneArgs;
     use crate::events::{Event, EventType};
+    use crate::pruner::prune;
     use chrono::{Duration, Utc};
     use std::io::Write;
     use tempfile::NamedTempFile;
@@ -12,23 +13,6 @@ mod tests {
         });
         event.timestamp = Utc::now() - Duration::days(days_ago);
         serde_json::to_string(&event).unwrap()
-    }
-
-    #[test]
-    fn test_prune_dry_run_does_not_modify_file() {
-        let mut file = NamedTempFile::new().unwrap();
-        writeln!(file, "{}", make_event(100)).unwrap();
-        writeln!(file, "{}", make_event(5)).unwrap();
-
-        let original = std::fs::read_to_string(file.path()).unwrap();
-
-        let _args = PruneArgs {
-            keep_days: 30,
-            dry_run: true,
-        };
-
-        let after = std::fs::read_to_string(file.path()).unwrap();
-        assert_eq!(original, after);
     }
 
     #[test]
@@ -43,5 +27,25 @@ mod tests {
 
         assert!(old_event.timestamp < cutoff);
         assert!(recent_event.timestamp >= cutoff);
+    }
+
+    #[test]
+    fn test_prune_dry_run_does_not_modify_file() {
+        let mut file = NamedTempFile::new().unwrap();
+        writeln!(file, "{}", make_event(100)).unwrap();
+        writeln!(file, "{}", make_event(5)).unwrap();
+
+        let original = std::fs::read_to_string(file.path()).unwrap();
+
+        let args = PruneArgs {
+            keep_days: 30,
+            dry_run: true,
+        };
+
+        crate::config::Config::timeline_path_override_for_test(file.path().to_path_buf());
+        let _ = prune(args);
+
+        let after = std::fs::read_to_string(file.path()).unwrap();
+        assert_eq!(original, after);
     }
 }

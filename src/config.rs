@@ -174,3 +174,29 @@ fn set_config(args: ConfigSetArgs) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+use std::cell::RefCell;
+
+#[cfg(test)]
+thread_local! {
+    static TEST_TIMELINE_PATH: RefCell<Option<std::path::PathBuf>> = RefCell::new(None);
+}
+
+impl Config {
+    #[cfg(test)]
+    pub fn timeline_path_override_for_test(path: std::path::PathBuf) {
+        TEST_TIMELINE_PATH.with(|p| *p.borrow_mut() = Some(path));
+    }
+
+    pub fn timeline_path() -> Result<std::path::PathBuf> {
+        #[cfg(test)]
+        {
+            let override_path = TEST_TIMELINE_PATH.with(|p| p.borrow().clone());
+            if let Some(path) = override_path {
+                return Ok(path);
+            }
+        }
+        Ok(Self::data_dir()?.join("timeline.jsonl"))
+    }
+}
