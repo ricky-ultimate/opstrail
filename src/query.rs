@@ -51,7 +51,6 @@ pub fn time_travel(args: BackArgs) -> Result<()> {
     Ok(())
 }
 
-
 pub fn search(args: SearchArgs) -> Result<()> {
     let timeline_path = Config::timeline_path()?;
 
@@ -154,7 +153,8 @@ pub fn stats(args: StatsArgs) -> Result<()> {
     let now = Local::now();
 
     let (from, to) = if args.week {
-        let start = now.date_naive() - chrono::Duration::days(now.date_naive().weekday() as i64);
+        let days_from_monday = now.date_naive().weekday().num_days_from_monday() as i64;
+        let start = now.date_naive() - chrono::Duration::days(days_from_monday);
         let end = now.date_naive();
         (start, end)
     } else if args.month {
